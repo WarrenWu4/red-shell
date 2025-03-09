@@ -34,11 +34,39 @@ def create():
     except Exception as e:
         return jsonify({"error": e}), 500
 
-@app.route("/<code>", methods=["GET"])
-def redirect_url(code):
-    # fetch url from backend
-    url = ""
+@app.route("/<string:id>", methods=["GET"])
+def redirect_url(id: str):
+    # fetch url from database 
     # if url not found, display error page
     # otherwise redirect to correct url
-    return redirect(url, code=301)
+    data = ShellUrl.query.filter_by(id=id).first()
+    if data:
+        return redirect(data.link, code=301)
+    else:
+        return jsonify({"err": "not found"}), 404
 
+@app.route("/delete/<string:id>", methods=["DELETE"])
+def delete_url(id: str):
+    # fetch url from database
+    # if url not found, display error page
+    # otherwise delete entry
+    data = ShellUrl.query.filter_by(id=id).first()
+    if data:
+        db.session.delete(data)
+        db.session.commit()
+        return jsonify({'msg': 'Shortened URL deleted successfully'}), 200
+    else:
+        return jsonify({'err': 'Shortened URL not found'}), 404
+
+@app.route("/update/<string:id>", methods=["PUT"])
+def update_url(id: str):
+    data = request.get_json()
+    url_entry = ShellUrl.query.filter_by(id=id).first()
+    if url_entry:
+        if 'link' in data:
+            url_entry.link = data['link']
+        db.session.commit()
+        return jsonify({'message': 'Shortened URL updated successfully'}), 200
+    else:
+        # Return an error if the shortened URL code doesn't exist
+        return jsonify({'error': 'Shortened URL not found'}), 404
