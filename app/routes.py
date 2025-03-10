@@ -3,6 +3,7 @@ from flask import jsonify, redirect, request
 from typing_extensions import Union, Dict
 from app.lib import check_create_body
 from app.models import ShellUrl
+from user_agents import parse
 
 @app.route("/", methods=["GET"])
 def index():
@@ -26,7 +27,7 @@ def create():
         # actually usuable and be able to smartly infer shit
         # have to do this little hack now, fk u
         id: str = data.get("id") # type: ignore
-        link: str = data.get("id") # type: ignore
+        link: str = data.get("link") # type: ignore
         new_url = ShellUrl(id=id, link=link)
         db.session.add(new_url)
         db.session.commit()
@@ -41,7 +42,18 @@ def redirect_url(id: str):
     # otherwise redirect to correct url
     data = ShellUrl.query.filter_by(id=id).first()
     if data:
-        return redirect(data.link, code=301)
+        hit_data = {}
+        user_agent_string = request.headers.get("User-Agent", "")
+        user_agent = parse(user_agent_string)
+        device_type = "Mobile" if user_agent.is_mobile else "Tablet" if user_agent.is_tablet else "Computer"
+        browser = user_agent.browser.family
+        hit_data["user_agent_string"] = user_agent_string
+        hit_data["ip_address"] = request.remote_addr
+        hit_data["qrcode"] = request.args.get("qrcode", "false").lower() == "true"
+        hit_data["device type"] = device_type
+        hit_data["browser"] = browser
+        # return redirect(data.link, code=301)
+        return jsonify({"msg": "success", "data": hit_data}), 200
     else:
         return jsonify({"err": "not found"}), 404
 
@@ -70,3 +82,7 @@ def update_url(id: str):
     else:
         # Return an error if the shortened URL code doesn't exist
         return jsonify({'error': 'Shortened URL not found'}), 404
+
+@app.route("/analytics/<string:id>", methods=["GET"])
+def analytics_url(id: str):
+    return jsonify({"msg": "wip"}), 200

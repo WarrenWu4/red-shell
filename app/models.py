@@ -15,3 +15,16 @@ class ShellUrl(db.Model):
     def __init__(self, id:str, link:str):
         self.id = id
         self.link = link
+
+"""
+class UrlHit(db.Model):
+    __tablename__ = "url_hits"
+    # required parameters
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    url_id = db.Column(db.String(255), db.ForeignKey("urls.id"), nullable=False)
+    timestamp = db.Column(db.dateTime, default=db.func.now())
+"""
+
+
+
+    
