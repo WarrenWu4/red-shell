@@ -2,7 +2,7 @@ from app import app, db
 from flask import jsonify, redirect, request
 from typing_extensions import Union, Dict
 from app.lib import check_create_body
-from app.models import ShellUrl
+from app.models import ShellUrl, UrlHit
 from user_agents import parse
 
 @app.route("/", methods=["GET"])
@@ -42,18 +42,21 @@ def redirect_url(id: str):
     # otherwise redirect to correct url
     data = ShellUrl.query.filter_by(id=id).first()
     if data:
-        hit_data = {}
         user_agent_string = request.headers.get("User-Agent", "")
         user_agent = parse(user_agent_string)
         device_type = "Mobile" if user_agent.is_mobile else "Tablet" if user_agent.is_tablet else "Computer"
         browser = user_agent.browser.family
-        hit_data["user_agent_string"] = user_agent_string
-        hit_data["ip_address"] = request.remote_addr
-        hit_data["qrcode"] = request.args.get("qrcode", "false").lower() == "true"
-        hit_data["device type"] = device_type
-        hit_data["browser"] = browser
-        # return redirect(data.link, code=301)
-        return jsonify({"msg": "success", "data": hit_data}), 200
+        qrcode_hit = request.args.get("qrcode", "false").lower() == "true"
+        new_hit = UrlHit(
+            url_id=id,
+            ip_addr=request.remote_addr,
+            device_type=device_type,
+            browser_type=browser,
+            qrcode=qrcode_hit
+        )
+        db.session.add(new_hit)
+        db.session.commit()
+        return redirect(data.link, code=301)
     else:
         return jsonify({"err": "not found"}), 404
 
